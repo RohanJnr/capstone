@@ -1,3 +1,5 @@
+from multiprocessing import Process
+
 import cv2
 
 
@@ -22,15 +24,16 @@ def persist_frames(frames: list) -> None:
     file_path = f"output/output_{num_blocks}.avi"
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter(file_path,fourcc, fps, (frame_width, frame_height))
-    
-
 
     for _frame in frames:
         out.write(_frame)
 
     out.release()
 
+
 print(fps)
+process_pool = []
+
 while True:
     ret, frame = video_capture.read()
 
@@ -42,8 +45,13 @@ while True:
     print(frame_count)
 
     if frame_count == frames_per_block:
-        persist_frames(frame_cache.copy())
+        p = Process(target=persist_frames, args=(frame_cache.copy(),))
+        p.start()
+
+        process_pool.append(p)
+
         frame_cache.clear()
+
         frame_count = 0
         num_blocks += 1
 
@@ -52,3 +60,6 @@ while True:
 
 
 video_capture.release()
+
+for process in process_pool:
+    process.join()
