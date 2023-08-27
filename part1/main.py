@@ -1,11 +1,11 @@
 import cv2
 
 
-SECONDS_PER_BLOCK = 1
+SECONDS_PER_BLOCK = 10
 
-video_path = 'video.mov'
+# video_path = 'video.mov'
 
-video_capture = cv2.VideoCapture(video_path)
+video_capture = cv2.VideoCapture(0)
 fps = int(video_capture.get(cv2.CAP_PROP_FPS))
 
 frames_per_block = fps * SECONDS_PER_BLOCK
@@ -18,16 +18,19 @@ num_blocks = 0
 def persist_frames(frames: list) -> None:
     frame_width = frames[0].shape[1]
     frame_height = frames[0].shape[0]
+    
+    file_path = f"output/output_{num_blocks}.avi"
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(file_path,fourcc, fps, (frame_width, frame_height))
+    
 
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(f"output/output_{num_blocks}.mp4", fourcc, fps, (frame_width, frame_height))
 
     for _frame in frames:
         out.write(_frame)
 
     out.release()
 
-
+print(fps)
 while True:
     ret, frame = video_capture.read()
 
@@ -36,6 +39,7 @@ while True:
 
     frame_cache.append(frame)
     frame_count += 1
+    print(frame_count)
 
     if frame_count == frames_per_block:
         persist_frames(frame_cache.copy())
@@ -48,6 +52,3 @@ while True:
 
 
 video_capture.release()
-
-
-
