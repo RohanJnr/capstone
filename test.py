@@ -141,13 +141,15 @@ def store(cache):
     print("Storage done")
 def prediction_to_cache(cache,prediction,value):
     if prediction[0]==1 and cache.qsize()==120:
-            store(cache)
+            q = multiprocessing.Process(target=store, args=(cache))
+            q.start()
             while cache.qsize()!=0:
               cache.get()
             print(cache.qsize())
     elif prediction[0]==0:
         if value==1:
-            store(cache)
+            q = multiprocessing.Process(target=store, args=(cache))
+            q.start()
             while cache.qsize()!=0:
               cache.get()
             print(cache.qsize())
