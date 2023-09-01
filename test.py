@@ -137,21 +137,24 @@ def write(queue,):
           
   except KeyboardInterrupt:
      print("Ended")
-def store(cache):
+def store(frames):
     print("Storage done")
 def prediction_to_cache(cache,prediction,value):
     if prediction[0]==1 and cache.qsize()==120:
-            q = multiprocessing.Process(target=store, args=(cache))
-            q.start()
+            frames=[]
+            
             while cache.qsize()!=0:
-              cache.get()
+              frames.append(cache.get())
+            q = multiprocessing.Process(target=store, args=(frames,))
+            q.start()
             print(cache.qsize())
     elif prediction[0]==0:
         if value==1:
-            q = multiprocessing.Process(target=store, args=(cache))
-            q.start()
+            frames=[]
             while cache.qsize()!=0:
-              cache.get()
+              frames.append(cache.get())
+            q = multiprocessing.Process(target=store, args=(frames,))
+            q.start()
             print(cache.qsize())
         elif value==0:
             if cache.qsize()==120:
