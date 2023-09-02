@@ -3,11 +3,11 @@ from multiprocessing import Process
 import cv2
 
 
-SECONDS_PER_BLOCK = 10
+SECONDS_PER_BLOCK = 1
 
-# video_path = 'video.mov'
+video_path = 'video.mov'
 
-video_capture = cv2.VideoCapture(0)
+video_capture = cv2.VideoCapture(video_path)
 fps = int(video_capture.get(cv2.CAP_PROP_FPS))
 
 frames_per_block = fps * SECONDS_PER_BLOCK
@@ -23,7 +23,7 @@ def persist_frames(frames: list) -> None:
     
     file_path = f"output/output_{num_blocks}.avi"
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(file_path,fourcc, fps, (frame_width, frame_height))
+    out = cv2.VideoWriter(file_path, fourcc, fps, (frame_width, frame_height))
 
     for _frame in frames:
         out.write(_frame)
