@@ -11,26 +11,22 @@ import pickle
 
 from sklearn.model_selection import StratifiedKFold
 from keras.utils import np_utils
+
+
 # Create a VideoCapture object.
 def generatorOurs(frames):
-
         while True:
-
-
                 batch_start = 0
                 batch_stop = 1
 
                 lx1 = list()
 
-        
                 optical_flow = frames
-
                 if len(optical_flow) < 50:
                         while len(optical_flow) < 50:
                                 optical_flow.append(optical_flow[-1])
                 else:
                         optical_flow = optical_flow[0:50]
-
                 lx1.append(optical_flow)
 
                 x1 = np.array(lx1)
@@ -62,7 +58,7 @@ def frame_sampling(conn,frames):
 def read(queue):
   try:
     cap = cv2.VideoCapture(0)
-  # Start capturing frames from the video.
+      # Start capturing frames from the video.
     while True:
       # Read the next frame from the video.
       ret, frame = cap.read()
@@ -100,7 +96,7 @@ def write(queue,):
   model = tf.keras.models.load_model('model.h5')  
   predictions=[]
   cache=multiprocessing.Queue()
-  y=multiprocessing.Value('i',0)
+  y=multiprocessing.Value('i', 0)
   try:
     block_no=0
     
@@ -190,5 +186,5 @@ if __name__ == '__main__':
         print("Both processes terminated.")
 
   # Wait for the processes to finish.
- 
+
     
