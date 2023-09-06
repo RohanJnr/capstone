@@ -11,22 +11,26 @@ import pickle
 
 from sklearn.model_selection import StratifiedKFold
 from keras.utils import np_utils
-
-
 # Create a VideoCapture object.
 def generatorOurs(frames):
+
         while True:
+
+
                 batch_start = 0
                 batch_stop = 1
 
                 lx1 = list()
 
+        
                 optical_flow = frames
+
                 if len(optical_flow) < 50:
                         while len(optical_flow) < 50:
                                 optical_flow.append(optical_flow[-1])
                 else:
                         optical_flow = optical_flow[0:50]
+
                 lx1.append(optical_flow)
 
                 x1 = np.array(lx1)
@@ -43,7 +47,7 @@ def generatorOurs(frames):
 
 # Create a buffer to store the frames.
 
-def frame_sampling(conn,frames):
+def frame_sampling(frames):
     count=0
     l=[]
     for i in frames:
@@ -53,12 +57,12 @@ def frame_sampling(conn,frames):
         else:
             count+=1
     
-    conn.send(l)
+    return l
         
 def read(queue):
   try:
     cap = cv2.VideoCapture(0)
-      # Start capturing frames from the video.
+  # Start capturing frames from the video.
     while True:
       # Read the next frame from the video.
       ret, frame = cap.read()
@@ -94,11 +98,10 @@ def read(queue):
       print("Ended")
 def write(queue,):
   model = tf.keras.models.load_model('model.h5')  
-  predictions=[]
   cache=multiprocessing.Queue()
-  y=multiprocessing.Value('i', 0)
+  y=multiprocessing.Value('i',-1)
   try:
-    block_no=0
+    
     
     while True:
         if queue.qsize()<200:
@@ -118,16 +121,14 @@ def write(queue,):
           prediction = np.argmax(prediction, axis=1)
           print(prediction)
           q = multiprocessing.Process(target=prediction_to_cache, args=(cache,prediction,y))
-          pipe=multiprocessing.Pipe()
-          r=multiprocessing.Process(target=frame_sampling,args=(pipe[1],frames))
           q.start()
-          r.start()
-          frames=pipe[0].recv()
+          frames=frame_sampling(frames)
+          
+          
+          
           q.join()
-          r.join()
           for frame in frames:
             cache.put(frame)
-          y=prediction
           print(cache.qsize())
           
           
@@ -136,23 +137,35 @@ def write(queue,):
 def store(frames):
     print("Storage done")
 def prediction_to_cache(cache,prediction,value):
-    if prediction[0]==1 and cache.qsize()==120:
+    if prediction[0]==1:
+      value.value = 3
+      if cache.qsize()==120:
             frames=[]
-            
             while cache.qsize()!=0:
               frames.append(cache.get())
             q = multiprocessing.Process(target=store, args=(frames,))
             q.start()
             print(cache.qsize())
     elif prediction[0]==0:
-        if value==1:
+        if value.value>0:
+            value.value-=1
+            if cache.qsize()==120:
+              frames=[]
+              while cache.qsize()!=0:
+                frames.append(cache.get())
+              q = multiprocessing.Process(target=store, args=(frames,))
+              q.start()
+              print(cache.qsize())
+            
+        elif value.value==0:
+            value.value-=1
             frames=[]
             while cache.qsize()!=0:
               frames.append(cache.get())
             q = multiprocessing.Process(target=store, args=(frames,))
             q.start()
             print(cache.qsize())
-        elif value==0:
+        else:
             if cache.qsize()==120:
               for i in range(40):
                   cache.get()
@@ -186,5 +199,5 @@ if __name__ == '__main__':
         print("Both processes terminated.")
 
   # Wait for the processes to finish.
-
+ 
     
