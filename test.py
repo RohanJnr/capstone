@@ -69,7 +69,7 @@ def read(queue):
 
       # If a frame was successfully read, append it to the buffer.
       if ret:
-        frame = cv2.resize(frame, (100,100))
+        frame = cv2.resize(frame, (128,128))
         queue.put(frame)
 
       # If the buffer is full, write it to a file.
@@ -97,7 +97,7 @@ def read(queue):
       cv2.destroyAllWindows()
       print("Ended")
 def write(queue,):
-  model = tf.keras.models.load_model('model.h5')  
+  model = tf.keras.models.load_model('modelnew.h5')  
   cache=multiprocessing.Queue()
   y=multiprocessing.Value('i',-1)
   try:
@@ -111,14 +111,13 @@ def write(queue,):
           
           for i in range(200):
             frames.append(queue.get())
-          
-          prediction = model.predict(generatorOurs(frames),
-                                        steps=1,
-                                        max_queue_size=10,
-                                        verbose=2)
+          X_original = np.array(frames).reshape(-1 , 128 * 128 * 3)
+          X_test_nn = X_original.reshape(-1, 128, 128, 3) / 255
+          prediction = model.predict(X_test_nn)
+          prediction = prediction > 0.5
+          prediction=int(max(prediction))
 
 
-          prediction = np.argmax(prediction, axis=1)
           print(prediction)
           q = multiprocessing.Process(target=prediction_to_cache, args=(cache,prediction,y))
           q.start()
@@ -137,7 +136,7 @@ def write(queue,):
 def store(frames):
     print("Storage done")
 def prediction_to_cache(cache,prediction,value):
-    if prediction[0]==1:
+    if prediction==1:
       value.value = 3
       if cache.qsize()==120:
             frames=[]
@@ -146,7 +145,7 @@ def prediction_to_cache(cache,prediction,value):
             q = multiprocessing.Process(target=store, args=(frames,))
             q.start()
             print(cache.qsize())
-    elif prediction[0]==0:
+    elif prediction==0:
         if value.value>0:
             value.value-=1
             if cache.qsize()==120:
