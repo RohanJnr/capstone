@@ -1,10 +1,9 @@
 from client.capture import Capture
-from client.constants import Queues, Values
+from client.constants import Queues
 
 
 def main():
-
-    capture = Capture(queue=Queues.frame_buffer)
+    capture = Capture()
     capture_process = capture.start_process()
 
 

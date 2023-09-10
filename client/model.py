@@ -1,20 +1,32 @@
-from multiprocessing import Pipe, Process, Queue
+from multiprocessing import Process, Queue
 
 import numpy as np
 import tensorflow as tf
 
 from client import MPClass
-from client.constants import Queues
+from client.constants import Queues, Settings
 
 
 class AnomalyModel(MPClass):
     """Class representation for anomaly detection model."""
 
-    def __init__(self, *, frame_buffer: Queue, cache: Queue) -> None:
+    def __init__(self) -> None:
         """init class."""
         self.model = tf.keras.models.load_model('model.h5')
-        self.frame_buffer = frame_buffer
-        self.cache = cache
+
+    @staticmethod
+    def frame_sampling(frames) -> list:
+        """Return sampled frames from initial set of frames by dropping frames."""
+        count = 0
+        sampled_frames = []
+        for i in frames:
+            if count == Settings.frames_to_skip:  # Skip (frames_to_skip) frames and consider 5th frame.
+                count = 0
+                sampled_frames.append(i)
+            else:
+                count += 1
+
+        return sampled_frames
 
     @staticmethod
     def generate_optical_flow(frames: list):
@@ -37,11 +49,11 @@ class AnomalyModel(MPClass):
 
             yield x1
 
-    def predict(self) -> list[int]:
+    def predict(self) -> None:
         """Predict if anomaly."""
         frames = []
         for i in range(200):
-            frames.append(self.frame_buffer.get())
+            frames.append(Queues.frame_buffer.get())
 
         prediction = self.model.predict(
             self.generate_optical_flow(frames),
@@ -51,12 +63,10 @@ class AnomalyModel(MPClass):
         )
         prediction = np.argmax(prediction, axis=1)
 
-
-
-    def target(self) -> None:
-        """Extract frames from frame_buffer and predict."""
-
+        sampled_frames = self.frame_sampling(frames)
+        Queues.prediction.put((prediction[0], sampled_frames))
 
     def start_process(self) -> Process:
         """Start process."""
+        return Process(target=self.predict)
 

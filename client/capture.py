@@ -8,7 +8,7 @@ from client.constants import Queues
 class Capture(MPClass):
     """Capture frames."""
 
-    def __init__(self, video_stream: int = 0, *, frame_buffer: Queue | None = None) -> None:
+    def __init__(self, video_stream: int = 0, *, frame_buffer: Queue = None) -> None:
         """Init class."""
         self.video_stream = video_stream
         self.queue = frame_buffer or Queues.frame_buffer
