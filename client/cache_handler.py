@@ -1,12 +1,17 @@
-
 import secrets
-from multiprocessing import Pipe, Process, Queue
+from multiprocessing import Process
+from pathlib import Path
+
+import cv2
 
 from client import MPClass
-from client.constants import Cache, Queues, Settings
+from client.constants import Queues, Settings
 
 
-class AnomalyModel(MPClass):
+ANOMALIES_FOLDER = Path("client", "anomalies")
+
+
+class CacheHandler(MPClass):
     """Class representation for anomaly detection model."""
 
     def __init__(self) -> None:
@@ -16,35 +21,70 @@ class AnomalyModel(MPClass):
 
         self.block_cache = []
 
+    def persist_blocks(self, blocks) -> None:
+        """Persist blocks."""
+        output_file = str(ANOMALIES_FOLDER / self.anomaly_id / f'output_video_{secrets.token_hex(6)}.mp4')  # Change the file name and extension as needed
+        codec = cv2.VideoWriter_fourcc(*'mp4v')  # You can use other codecs like 'XVID' or 'MJPG'
+        fps = 6.0  # Frames per second
+        frame_size = (1280, 720)  # Set the width and height of your frames here
+
+        out = cv2.VideoWriter(output_file, codec, fps, frame_size)
+
+        for block in blocks:
+            for frame in block:
+                out.write(frame)
+
     def prediction_to_cache(self) -> None:
         """Handle frame caching after model prediction and frame sampling,"""
-        prediction, sampled_frames = Queues.prediction.get()
-        num_max_blocks = Settings.blocks_to_persist()
+        while True:
+            prediction, sampled_frames = Queues.prediction.get()
+            num_max_blocks = Settings.blocks_to_persist()
 
-        if prediction == 1:
-            if self.anomaly_id is None:
-                self.anomaly_id = secrets.token_hex(4)
+            print(f"-- Prev Cache size: {len(self.block_cache)}")
+            print(f"-- Got from prediction queue: {prediction}, {len(sampled_frames)}")
 
-            self.num_blocks_to_persist = num_max_blocks
+            if prediction == 1:
+                if self.anomaly_id is None:
+                    self.anomaly_id = secrets.token_hex(4)
+                    anomaly_folder = ANOMALIES_FOLDER / self.anomaly_id
+                    anomaly_folder.mkdir(exist_ok=True)
 
-        if len(self.block_cache) == num_max_blocks:
-            # Queue is full, store "Cache.num_blocks_to_persist.value" amount in storage.
-            blocks = []
-            if self.num_blocks_to_persist <= num_max_blocks:
-                for _ in range(self.num_blocks_to_persist):
+                self.num_blocks_to_persist = num_max_blocks
+
+                blocks = []
+                while self.block_cache:
                     blocks.append(self.block_cache.pop(0))
 
-            frames = []
-            while not self.block_cache:
-                frames.append(Queues.prediction.get()[1])
+                blocks.append(sampled_frames)
 
-            frames.append(sampled_frames)
-            print("persist.")
+                print(f"xx persisting blocks: {len(blocks)}")
+                self.persist_blocks(blocks)
+                continue
 
-        else:
-            # Queue is not full.
-            pass
+            if len(self.block_cache) == num_max_blocks:
+                # Queue is full, store "Cache.num_blocks_to_persist.value" amount in storage.
 
-    def start_process(self) -> Process:
+                if not self.anomaly_id:
+                    self.block_cache.pop(0)
+                    self.block_cache.append(sampled_frames)
+
+                else:
+                    blocks = []
+
+                    while self.block_cache and self.num_blocks_to_persist != 0:
+                        blocks.append(self.block_cache.pop(0))
+                        self.num_blocks_to_persist -= 1
+
+                    print(f"xx Cache full: persisting blocks: {len(blocks)}")
+                    self.persist_blocks(blocks)
+
+            else:
+                # Queue is not full.
+                self.block_cache.append(sampled_frames)
+
+            if self.num_blocks_to_persist == 0:
+                self.anomaly_id = None
+
+    def get_process(self) -> Process:
         """Start process."""
-        pass
+        return Process(target=self.prediction_to_cache)

@@ -5,7 +5,7 @@ from multiprocessing import Queue, Value
 class Settings:
     time_range = 120  # 120 seconds for before and after anomaly.
     frames_per_block = 200
-    fps = 24  # Change value at start.
+    fps = 30  # Change value at start.
 
     frames_to_skip = 4  # Number of frames of skip and consider next frame immediate.
 

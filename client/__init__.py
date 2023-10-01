@@ -6,6 +6,6 @@ class MPClass(ABC):
     """Class that is initialized and runs as a process."""
 
     @abstractmethod
-    def start_process(self) -> Process:
+    def get_process(self) -> Process:
         """Start the process."""
         ...

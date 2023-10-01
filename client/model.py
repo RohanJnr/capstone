@@ -1,4 +1,5 @@
-from multiprocessing import Process, Queue
+import random
+from multiprocessing import Process
 
 import numpy as np
 import tensorflow as tf
@@ -66,7 +67,27 @@ class AnomalyModel(MPClass):
         sampled_frames = self.frame_sampling(frames)
         Queues.prediction.put((prediction[0], sampled_frames))
 
-    def start_process(self) -> Process:
+    def dummy_predict(self) -> None:
+        """return randomy numbers."""
+        arr = [0, 0, 0, 1, 0, 0, 1]
+        idx = 0
+        while True:
+            frames = []
+            for i in range(200):
+                frames.append(Queues.frame_buffer.get())
+
+            print("got 200 frames")
+
+            prediction = arr[idx]
+            idx += 1
+
+            sampled_frames = self.frame_sampling(frames)
+            Queues.prediction.put((prediction, sampled_frames))
+
+    def get_process(self) -> Process:
         """Start process."""
         return Process(target=self.predict)
 
+    def get_dummy(self) -> Process:
+        """Start dummy prediction process."""
+        return Process(target=self.dummy_predict)
