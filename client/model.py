@@ -1,4 +1,3 @@
-import random
 from multiprocessing import Process
 
 import numpy as np

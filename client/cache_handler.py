@@ -1,15 +1,27 @@
+import cv2
+import io
+import pickle
 import secrets
+
 from multiprocessing import Process
+import numpy as np
 from pathlib import Path
 
-import cv2
+from minio import Minio
+import urllib3
 
 from client import MPClass
 from client.constants import Queues, Settings
 
 
-ANOMALIES_FOLDER = Path("client", "anomalies")
+client  = Minio('127.0.0.1:9000',
+                access_key='minio',
+                secret_key='minio123',
+                secure=False,
+                http_client=urllib3.ProxyManager('http://127.0.0.1:9000')
+)
 
+ANOMALIES_FOLDER = Path("client", "anomalies")
 
 class CacheHandler(MPClass):
     """Class representation for anomaly detection model."""
@@ -21,8 +33,8 @@ class CacheHandler(MPClass):
 
         self.block_cache = []
 
-    def persist_blocks(self, blocks) -> None:
-        """Persist blocks."""
+    def persist_blocks_local(self, blocks) -> None:
+        """Persist blocks in local storage."""
         output_file = str(ANOMALIES_FOLDER / self.anomaly_id / f'output_video_{secrets.token_hex(6)}.mp4')  # Change the file name and extension as needed
         codec = cv2.VideoWriter_fourcc(*'mp4v')  # You can use other codecs like 'XVID' or 'MJPG'
         fps = 6.0  # Frames per second
@@ -32,8 +44,22 @@ class CacheHandler(MPClass):
 
         for block in blocks:
             for frame in block:
-                out.write(frame)
+                out.write(frame)   
+    
+    def persist_blocks(self, blocks) -> None:
+        """Persist blocks to minio storage."""
+        cache = []
+        for block in blocks:
+            cache.extend(block)
+        cache = np.asarray(cache)
 
+        result = client.put_object('test', f'{self.anomaly_id}/cache_blocks_{secrets.token_hex(6)}', data=io.BytesIO(pickle.dumps(cache)), length=len(pickle.dumps(cache)))
+        print("Created {0} object; etag: {1}, version-id: {2}".format(
+                result.object_name, result.etag, result.version_id
+            )
+        )
+
+        
     def prediction_to_cache(self) -> None:
         """Handle frame caching after model prediction and frame sampling,"""
         while True:
