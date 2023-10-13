@@ -52,24 +52,25 @@ class AnomalyModel(MPClass):
 
     def predict(self) -> None:
         """Predict if anomaly."""
-        frames = []
-        for i in range(200):
-            frames.append(Queues.frame_buffer.get())
+        while True:
+            frames = []
+            for i in range(200):
+                frames.append(Queues.frame_buffer.get())
 
-        print("got 200 frames")
+            print("got 200 frames")
 
-        original = np.array(frames).reshape(-1, 128 * 128 * 3)
-        test_nn = original.reshape(-1, 128, 128, 3) / 255
+            original = np.array(frames).reshape(-1, 128 * 128 * 3)
+            test_nn = original.reshape(-1, 128, 128, 3) / 255
 
-        print("starting prediction.")
-        prediction = self.model.predict(test_nn, verbose=1)
+            print("starting prediction.")
+            prediction = self.model.predict(test_nn, verbose=1)
 
-        prediction = prediction > 0.5
-        prediction=int(max(prediction))
+            prediction = prediction > 0.5
+            prediction=int(max(prediction))
 
-        print(f"Prediction: {prediction}")
-        sampled_frames = self.frame_sampling(frames)
-        # Queues.prediction.put((prediction, sampled_frames))
+            print(f"Prediction: {prediction}")
+            sampled_frames = self.frame_sampling(frames)
+            Queues.prediction.put((prediction, sampled_frames))
 
     def dummy_predict(self) -> None:
         """return randomy numbers."""

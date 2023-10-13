@@ -4,7 +4,7 @@ from client import capture, cache_handler, model
 from client.constants import Queues
 
 
-VIDEO_PATH = Path("videos/one.mp4")
+VIDEO_PATH = Path("test/videos/one.mp4")
 
 
 def main():
