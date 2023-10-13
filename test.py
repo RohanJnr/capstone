@@ -51,10 +51,12 @@ def frame_sampling(frames):
     count=0
     l=[]
     for i in frames:
-        if count==5:
+        if count==4:
+            count=0
             l.append(i)
         else:
             count+=1
+    
     return l
         
 def read(queue):
@@ -67,7 +69,7 @@ def read(queue):
 
       # If a frame was successfully read, append it to the buffer.
       if ret:
-        frame = cv2.resize(frame, (100,100))
+        frame = cv2.resize(frame, (128,128))
         queue.put(frame)
 
       # If the buffer is full, write it to a file.
@@ -95,57 +97,76 @@ def read(queue):
       cv2.destroyAllWindows()
       print("Ended")
 def write(queue,):
-  model = tf.keras.models.load_model('model.h5')  
-  predictions=[]
+  model = tf.keras.models.load_model('modelnew.h5')  
   cache=multiprocessing.Queue()
-  y=multiprocessing.Value('i',0)
+  y=multiprocessing.Value('i',-1)
   try:
-    block_no=0
+    
     
     while True:
         if queue.qsize()<200:
             time.sleep(4)
         else:
           frames=[]
-          x=min(200,queue.qsize())
-          print(queue.qsize())
-          for i in range(x):
+          
+          for i in range(200):
             frames.append(queue.get())
-          print(queue.qsize())
-          prediction = model.predict(generatorOurs(frames),
-                                        steps=1,
-                                        max_queue_size=10,
-                                        verbose=2)
+          X_original = np.array(frames).reshape(-1 , 128 * 128 * 3)
+          X_test_nn = X_original.reshape(-1, 128, 128, 3) / 255
+          prediction = model.predict(X_test_nn)
+          prediction = prediction > 0.5
+          prediction=int(max(prediction))
 
 
-          prediction = np.argmax(prediction, axis=1)
-          q = multiprocessing.Process(target=read, args=(cache,prediction,y))
-          r=multiprocessing.Process(target=frame_sampling,args=(frames))
+          print(prediction)
+          q = multiprocessing.Process(target=prediction_to_cache, args=(cache,prediction,y))
           q.start()
-          r.start()
-          frames,exitcode=r.communicate()
+          frames=frame_sampling(frames)
+          
+          
+          
           q.join()
-          r.join()
           for frame in frames:
             cache.put(frame)
-          y=prediction
-          print(prediction)
+          print(cache.qsize())
+          
           
   except KeyboardInterrupt:
      print("Ended")
-def store(cache):
-    print("Done")
+def store(frames):
+    print("Storage done")
 def prediction_to_cache(cache,prediction,value):
-    if prediction[0]==1 and cache.qsize()==800:
-            store(cache)
-            cache.clear()
-    elif prediction[0]==0:
-        if value==1:
-            store(cache)
-            cache.clear()
-        elif value==0:
-            if cache.qsize()==800:
-              for i in range(200):
+    if prediction==1:
+      value.value = 3
+      if cache.qsize()==120:
+            frames=[]
+            while cache.qsize()!=0:
+              frames.append(cache.get())
+            q = multiprocessing.Process(target=store, args=(frames,))
+            q.start()
+            print(cache.qsize())
+    elif prediction==0:
+        if value.value>0:
+            value.value-=1
+            if cache.qsize()==120:
+              frames=[]
+              while cache.qsize()!=0:
+                frames.append(cache.get())
+              q = multiprocessing.Process(target=store, args=(frames,))
+              q.start()
+              print(cache.qsize())
+            
+        elif value.value==0:
+            value.value-=1
+            frames=[]
+            while cache.qsize()!=0:
+              frames.append(cache.get())
+            q = multiprocessing.Process(target=store, args=(frames,))
+            q.start()
+            print(cache.qsize())
+        else:
+            if cache.qsize()==120:
+              for i in range(40):
                   cache.get()
             
               
@@ -164,9 +185,11 @@ if __name__ == '__main__':
   c.start()
   try:
         p.join()
+        c.join()
   except KeyboardInterrupt:
         print("Sending termination signal to dequeue process...")
           # Signal the dequeue process to stop
+        p.join()
         c.join()
         file_path = "output/output_final.avi"
 
