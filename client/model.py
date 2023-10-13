@@ -12,7 +12,7 @@ class AnomalyModel(MPClass):
 
     def __init__(self) -> None:
         """init class."""
-        self.model = tf.keras.models.load_model('model.h5')
+        self.model = tf.keras.models.load_model('modelnew.h5')
 
     @staticmethod
     def frame_sampling(frames) -> list:
@@ -45,9 +45,10 @@ class AnomalyModel(MPClass):
             x1 = np.array(list_x1)
             x1 = x1.astype('float32')
             x1 /= 255
-            x1 = x1.reshape((x1.shape[0], 50, 100, 100, 3))
-
+            x1 = x1.reshape(-1, 640, 360, 3)
+            print("done reshaping.")
             yield x1
+        
 
     def predict(self) -> None:
         """Predict if anomaly."""
@@ -55,16 +56,20 @@ class AnomalyModel(MPClass):
         for i in range(200):
             frames.append(Queues.frame_buffer.get())
 
-        prediction = self.model.predict(
-            self.generate_optical_flow(frames),
-            steps=1,
-            max_queue_size=10,
-            verbose=2
-        )
-        prediction = np.argmax(prediction, axis=1)
+        print("got 200 frames")
 
+        original = np.array(frames).reshape(-1, 128 * 128 * 3)
+        test_nn = original.reshape(-1, 128, 128, 3) / 255
+
+        print("starting prediction.")
+        prediction = self.model.predict(test_nn, verbose=1)
+
+        prediction = prediction > 0.5
+        prediction=int(max(prediction))
+
+        print(f"Prediction: {prediction}")
         sampled_frames = self.frame_sampling(frames)
-        Queues.prediction.put((prediction[0], sampled_frames))
+        # Queues.prediction.put((prediction, sampled_frames))
 
     def dummy_predict(self) -> None:
         """return randomy numbers."""

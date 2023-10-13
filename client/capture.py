@@ -24,7 +24,7 @@ class Capture(MPClass):
             ret, frame = cap.read()
 
             if ret:
-                # frame = cv2.resize(frame, (100, 100))
+                frame = cv2.resize(frame, (128, 128))
                 self.queue.put(frame)
 
                 cv2.imshow('Frame', frame)
