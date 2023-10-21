@@ -3,16 +3,20 @@ from multiprocessing import Process
 import numpy as np
 import tensorflow as tf
 
+import cv2
+
 from client import MPClass
 from client.constants import Queues, Settings
 
+# tf.config.set_visible_devices([], 'GPU')
 
 class AnomalyModel(MPClass):
     """Class representation for anomaly detection model."""
 
     def __init__(self) -> None:
         """init class."""
-        self.model = tf.keras.models.load_model('modelnew.h5')
+        # self.model = tf.keras.models.load_model('modelnew.h5')
+        pass
 
     @staticmethod
     def frame_sampling(frames) -> list:
@@ -52,18 +56,22 @@ class AnomalyModel(MPClass):
 
     def predict(self) -> None:
         """Predict if anomaly."""
+        model = tf.keras.models.load_model('modelnew.h5')
         while True:
             frames = []
+            resized_frames = []
             for i in range(200):
-                frames.append(Queues.frame_buffer.get())
+                frame = Queues.frame_buffer.get()
+                frames.append(frame)
+                resized_frames.append(cv2.resize(frame, (128, 128)))
 
             print("got 200 frames")
 
-            original = np.array(frames).reshape(-1, 128 * 128 * 3)
+            original = np.array(resized_frames).reshape(-1, 128 * 128 * 3)
             test_nn = original.reshape(-1, 128, 128, 3) / 255
 
             print("starting prediction.")
-            prediction = self.model.predict(test_nn, verbose=1)
+            prediction = model.predict(test_nn, verbose=1)
 
             prediction = prediction > 0.5
             prediction=int(max(prediction))
@@ -91,7 +99,9 @@ class AnomalyModel(MPClass):
 
     def get_process(self) -> Process:
         """Start process."""
-        return Process(target=self.predict)
+        prediction_process = Process(target=self.predict)
+        prediction_process.start()
+        return prediction_process
 
     def get_dummy(self) -> Process:
         """Start dummy prediction process."""

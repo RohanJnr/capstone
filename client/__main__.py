@@ -1,29 +1,31 @@
 from pathlib import Path
 
 from client import capture, cache_handler, model
-from client.constants import Queues
 
 
-VIDEO_PATH = Path("test/videos/one.mp4")
+VIDEO_PATH = Path("./test/videos/Assault009_x264.mp4")
 
 
 def main():
+    try:
+        cap = capture.Capture(str(VIDEO_PATH))
+        cap_process = cap.get_process()
+        cap_process.start()
 
+        mod = model.AnomalyModel()
+        mod_process = mod.get_process()
 
-    mod = model.AnomalyModel()
-    mod_process = mod.get_process()
-    mod_process.start()
+        ch = cache_handler.CacheHandler()
+        ch_process = ch.get_process()
+        ch_process.start()
 
-    cap = capture.Capture(str(VIDEO_PATH))
-    cap_process = cap.get_process()
-
-    cap_process.start()
-
-
-    ch = cache_handler.CacheHandler()
-    ch_process = ch.get_process()
-
-    ch_process.start()
+        cap_process.join()
+        mod_process.join()
+        ch_process.join()
+    except KeyboardInterrupt:
+        cap_process.kill()
+        mod_process.kill()
+        ch_process.kill()
 
 
 

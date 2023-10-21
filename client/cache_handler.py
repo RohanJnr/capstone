@@ -14,12 +14,12 @@ from client import MPClass
 from client.constants import Queues, Settings
 
 
-# client  = Minio('127.0.0.1:9000',
-#                 access_key='minio',
-#                 secret_key='minio123',
-#                 secure=False,
-#                 http_client=urllib3.ProxyManager('http://127.0.0.1:9000')
-# )
+client  = Minio('127.0.0.1:9000',
+                access_key='minio',
+                secret_key='minio123',
+                secure=False,
+                http_client=urllib3.ProxyManager('http://127.0.0.1:9000')
+)
 
 ANOMALIES_FOLDER = Path("client", "anomalies")
 
@@ -38,7 +38,7 @@ class CacheHandler(MPClass):
         output_file = str(ANOMALIES_FOLDER / self.anomaly_id / f'output_video_{secrets.token_hex(6)}.mp4')  # Change the file name and extension as needed
         codec = cv2.VideoWriter_fourcc(*'mp4v')  # You can use other codecs like 'XVID' or 'MJPG'
         fps = 6.0  # Frames per second
-        frame_size = (128, 128)  # Set the width and height of your frames here
+        frame_size = (320, 240)  # Set the width and height of your frames here
 
         out = cv2.VideoWriter(output_file, codec, fps, frame_size)
 
@@ -53,11 +53,11 @@ class CacheHandler(MPClass):
             cache.extend(block)
         cache = np.asarray(cache)
 
-        # result = client.put_object('test', f'{self.anomaly_id}/cache_blocks_{secrets.token_hex(6)}', data=io.BytesIO(pickle.dumps(cache)), length=len(pickle.dumps(cache)))
-        # print("Created {0} object; etag: {1}, version-id: {2}".format(
-        #         result.object_name, result.etag, result.version_id
-        #     )
-        # )
+        result = client.put_object('test', f'{self.anomaly_id}/cache_blocks_{secrets.token_hex(6)}', data=io.BytesIO(pickle.dumps(cache)), length=len(pickle.dumps(cache)))
+        print("Created {0} object; etag: {1}, version-id: {2}".format(
+                result.object_name, result.etag, result.version_id
+            )
+        )
 
         
     def prediction_to_cache(self) -> None:
