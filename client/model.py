@@ -8,15 +8,10 @@ import cv2
 from client import MPClass
 from client.constants import Queues, Settings
 
-# tf.config.set_visible_devices([], 'GPU')
+tf.config.set_visible_devices([], 'GPU')
 
 class AnomalyModel(MPClass):
     """Class representation for anomaly detection model."""
-
-    def __init__(self) -> None:
-        """init class."""
-        # self.model = tf.keras.models.load_model('modelnew.h5')
-        pass
 
     @staticmethod
     def frame_sampling(frames) -> list:
@@ -24,35 +19,13 @@ class AnomalyModel(MPClass):
         count = 0
         sampled_frames = []
         for i in frames:
-            if count == Settings.frames_to_skip:  # Skip (frames_to_skip) frames and consider 5th frame.
+            if count == Settings.frames_to_skip:  # Skip (frames_to_skip) frames and consider 4th frame.
                 count = 0
                 sampled_frames.append(i)
             else:
                 count += 1
 
-        return sampled_frames
-
-    @staticmethod
-    def generate_optical_flow(frames: list):
-        """Convert frames into optical flow."""
-        while True:
-            list_x1 = []
-            optical_flow = frames
-
-            if len(optical_flow) < 50:
-                while len(optical_flow) < 50:
-                    optical_flow.append(optical_flow[-1])
-            else:
-                optical_flow = optical_flow[0:50]
-            list_x1.append(optical_flow)
-
-            x1 = np.array(list_x1)
-            x1 = x1.astype('float32')
-            x1 /= 255
-            x1 = x1.reshape(-1, 640, 360, 3)
-            print("done reshaping.")
-            yield x1
-        
+        return sampled_frames      
 
     def predict(self) -> None:
         """Predict if anomaly."""

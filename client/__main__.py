@@ -3,7 +3,7 @@ from pathlib import Path
 from client import capture, cache_handler, model
 
 
-VIDEO_PATH = Path("./test/videos/Assault009_x264.mp4")
+VIDEO_PATH = Path("./test/videos/test_again.mp4")
 
 
 def main():

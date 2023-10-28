@@ -1,10 +1,7 @@
 import cv2
-import io
-import pickle
 import secrets
 
 from multiprocessing import Process
-import numpy as np
 from pathlib import Path
 
 from minio import Minio
@@ -32,36 +29,37 @@ class CacheHandler(MPClass):
         self.num_blocks_to_persist = 0
 
         self.block_cache = []
-
-    def persist_blocks_local(self, blocks) -> None:
-        """Persist blocks in local storage."""
-        output_file = str(ANOMALIES_FOLDER / self.anomaly_id / f'output_video_{secrets.token_hex(6)}.mp4')  # Change the file name and extension as needed
-        codec = cv2.VideoWriter_fourcc(*'mp4v')  # You can use other codecs like 'XVID' or 'MJPG'
-        fps = 6.0  # Frames per second
-        frame_size = (320, 240)  # Set the width and height of your frames here
-
-        out = cv2.VideoWriter(output_file, codec, fps, frame_size)
-
-        for block in blocks:
-            for frame in block:
-                out.write(frame)   
+        self.block_counter = 0
     
     def persist_blocks(self, blocks) -> None:
         """Persist blocks to minio storage."""
-        cache = []
+        clip_name = f'clip_{self.block_counter}.mp4'
+        self.block_counter += 1
+
+        output_file = Path(ANOMALIES_FOLDER, self.anomaly_id, clip_name)  # Change the file name and extension as needed
+        codec = cv2.VideoWriter_fourcc(*'avc1')  # You can use other codecs like 'XVID' or 'MJPG'
+        fps = 6.0  # Frames per second
+        frame_size = (484, 360)  # Set the width and height of your frames here
+
+        out = cv2.VideoWriter(str(output_file), codec, fps, frame_size)
+
         for block in blocks:
-            cache.extend(block)
-        cache = np.asarray(cache)
+            for frame in block:
+                out.write(frame)
 
-        result = client.put_object('test', f'{self.anomaly_id}/cache_blocks_{secrets.token_hex(6)}', data=io.BytesIO(pickle.dumps(cache)), length=len(pickle.dumps(cache)))
-        print("Created {0} object; etag: {1}, version-id: {2}".format(
-                result.object_name, result.etag, result.version_id
-            )
-        )
-
+        out.release()
+        while out.isOpened():
+            pass
         
+        try:
+            result = client.fput_object('test', f'{self.anomaly_id}/{clip_name}', output_file.absolute(), content_type="video/mp4")
+            print(f"Created {result.object_name} object")
+        except Exception as e:
+            print(e)
+
     def prediction_to_cache(self) -> None:
         """Handle frame caching after model prediction and frame sampling,"""
+        print(f"Cache handler started: {Settings.blocks_to_persist()}")
         while True:
             prediction, sampled_frames = Queues.prediction.get()
             num_max_blocks = Settings.blocks_to_persist()
@@ -84,7 +82,7 @@ class CacheHandler(MPClass):
                 blocks.append(sampled_frames)
 
                 print(f"xx persisting blocks: {len(blocks)}")
-                self.persist_blocks_local(blocks)
+                self.persist_blocks(blocks)
                 continue
 
             if len(self.block_cache) == num_max_blocks:
@@ -102,7 +100,7 @@ class CacheHandler(MPClass):
                         self.num_blocks_to_persist -= 1
 
                     print(f"xx Cache full: persisting blocks: {len(blocks)}")
-                    self.persist_blocks_local(blocks)
+                    self.persist_blocks(blocks)
 
             else:
                 # Queue is not full.
@@ -110,6 +108,8 @@ class CacheHandler(MPClass):
 
             if self.num_blocks_to_persist == 0:
                 self.anomaly_id = None
+                self.block_counter = 0
+                print("Anomaly ended.")
 
     def get_process(self) -> Process:
         """Start process."""
