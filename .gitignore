@@ -90,3 +90,9 @@ test/
 
 # Minio docker volume
 minioc1-data/
+
+# FLAVR Saved Model
+interpolation/FLAVR_4x.pth
+
+# Temp files
+tmp
