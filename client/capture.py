@@ -1,8 +1,8 @@
-from pathlib import Path
+import sys
 from multiprocessing import Process
 
 import cv2
-
+from loguru import logger
 
 from client import MPClass
 from client.constants import Queues
@@ -19,6 +19,8 @@ class Capture(MPClass):
     def start_capture(self) -> None:
         """Capture frames using opencv and enqueue."""
         cap = cv2.VideoCapture(self.video_stream)
+
+        logger.debug(f"Starting capture of {self.video_stream}")
 
         while cap.isOpened():
             ret, frame = cap.read()

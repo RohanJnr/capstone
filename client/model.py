@@ -1,14 +1,17 @@
+import sys
 from multiprocessing import Process
 
+import cv2
 import numpy as np
 import tensorflow as tf
-
-import cv2
+from loguru import logger
 
 from client import MPClass
 from client.constants import Queues, Settings
 
+
 tf.config.set_visible_devices([], 'GPU')
+
 
 class AnomalyModel(MPClass):
     """Class representation for anomaly detection model."""
@@ -38,23 +41,23 @@ class AnomalyModel(MPClass):
                 frames.append(frame)
                 resized_frames.append(cv2.resize(frame, (128, 128)))
 
-            print("got 200 frames")
+            logger.debug("Got 200 frames")
 
             original = np.array(resized_frames).reshape(-1, 128 * 128 * 3)
             test_nn = original.reshape(-1, 128, 128, 3) / 255
 
-            print("starting prediction.")
+            logger.debug("starting prediction.")
             prediction = model.predict(test_nn, verbose=1)
 
             prediction = prediction > 0.5
-            prediction=int(max(prediction))
+            prediction = int(max(prediction))
 
-            print(f"Prediction: {prediction}")
+            logger.debug(f"Prediction: {prediction}")
             sampled_frames = self.frame_sampling(frames)
             Queues.prediction.put((prediction, sampled_frames))
 
     def dummy_predict(self) -> None:
-        """return randomy numbers."""
+        """return randomly numbers."""
         arr = [0, 0, 0, 1, 0, 0, 1]
         idx = 0
         while True:
@@ -62,7 +65,7 @@ class AnomalyModel(MPClass):
             for i in range(200):
                 frames.append(Queues.frame_buffer.get())
 
-            print("got 200 frames")
+            logger.debug("got 200 frames")
 
             prediction = arr[idx]
             idx += 1
@@ -73,7 +76,6 @@ class AnomalyModel(MPClass):
     def get_process(self) -> Process:
         """Start process."""
         prediction_process = Process(target=self.predict)
-        prediction_process.start()
         return prediction_process
 
     def get_dummy(self) -> Process:

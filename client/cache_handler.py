@@ -1,31 +1,34 @@
-import cv2
-import secrets
-
+import urllib3
+from datetime import datetime
 from multiprocessing import Process
 from pathlib import Path
 
+import cv2
 from minio import Minio
-import urllib3
+from loguru import logger
 
 from client import MPClass
 from client.constants import Queues, Settings
 
 
-client  = Minio('127.0.0.1:9000',
-                access_key='minio',
-                secret_key='minio123',
-                secure=False,
-                http_client=urllib3.ProxyManager('http://127.0.0.1:9000')
+client = Minio('127.0.0.1:9000',
+    access_key='minio',
+    secret_key='minio123',
+    secure=False,
+    http_client=urllib3.ProxyManager('http://127.0.0.1:9000')
 )
 
 ANOMALIES_FOLDER = Path("client", "anomalies")
+DAY_FOLDER_STRFTIME = "%d %b [%A], %Y"
+TIME_FOLDER_STRFTIME = "%H:%M"
+
 
 class CacheHandler(MPClass):
     """Class representation for anomaly detection model."""
 
     def __init__(self) -> None:
         """init class."""
-        self.anomaly_id: str | None = None
+        self.anomaly_id: datetime | None = None
         self.num_blocks_to_persist = 0
 
         self.block_cache = []
@@ -36,12 +39,20 @@ class CacheHandler(MPClass):
         clip_name = f'clip_{self.block_counter}.mp4'
         self.block_counter += 1
 
-        output_file = Path(ANOMALIES_FOLDER, self.anomaly_id, clip_name)  # Change the file name and extension as needed
+        anomaly_day_folder = self.anomaly_id.strftime(DAY_FOLDER_STRFTIME)
+        anomaly_time_folder = self.anomaly_id.strftime(TIME_FOLDER_STRFTIME)
+
+        output_file = Path(ANOMALIES_FOLDER, anomaly_day_folder, anomaly_time_folder, clip_name)
         codec = cv2.VideoWriter_fourcc(*'avc1')  # You can use other codecs like 'XVID' or 'MJPG'
         fps = 6.0  # Frames per second
-        frame_size = (484, 360)  # Set the width and height of your frames here
+
+        height, width, _ = blocks[0][0].shape
+
+        frame_size = (width, height)  # Set the width and height of your frames here
 
         out = cv2.VideoWriter(str(output_file), codec, fps, frame_size)
+
+        logger.debug(f"-- Persisting Clip {output_file}")
 
         for block in blocks:
             for frame in block:
@@ -50,28 +61,36 @@ class CacheHandler(MPClass):
         out.release()
         while out.isOpened():
             pass
-        
+
         try:
-            result = client.fput_object('test', f'{self.anomaly_id}/{clip_name}', output_file.absolute(), content_type="video/mp4")
-            print(f"Created {result.object_name} object")
+            result = client.fput_object(
+                'test',
+                f'{anomaly_day_folder}/{anomaly_time_folder}/{clip_name}',
+                output_file.absolute(),
+                content_type="video/mp4"
+            )
+            logger.debug(f"-- Created {result.object_name} object.")
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def prediction_to_cache(self) -> None:
         """Handle frame caching after model prediction and frame sampling,"""
-        print(f"Cache handler started: {Settings.blocks_to_persist()}")
+        logger.debug(f"-- Cache handler started: {Settings.blocks_to_persist()}")
         while True:
             prediction, sampled_frames = Queues.prediction.get()
             num_max_blocks = Settings.blocks_to_persist()
 
-            print(f"-- Prev Cache size: {len(self.block_cache)}")
-            print(f"-- Got from prediction queue: {prediction}, {len(sampled_frames)}")
+            logger.debug(f"-- Prev Cache size: {len(self.block_cache)}")
 
             if prediction == 1:
+                logger.warning(f"-- Got from prediction queue: {prediction}, {len(sampled_frames)} Frames")
                 if self.anomaly_id is None:
-                    self.anomaly_id = secrets.token_hex(4)
-                    anomaly_folder = ANOMALIES_FOLDER / self.anomaly_id
-                    anomaly_folder.mkdir(exist_ok=True)
+                    self.anomaly_id = datetime.now()
+                    anomaly_day_folder = self.anomaly_id.strftime(DAY_FOLDER_STRFTIME)
+                    anomaly_time_folder = self.anomaly_id.strftime(TIME_FOLDER_STRFTIME)
+
+                    anomaly_folder = ANOMALIES_FOLDER / anomaly_day_folder / anomaly_time_folder
+                    anomaly_folder.mkdir(parents=True, exist_ok=True)
 
                 self.num_blocks_to_persist = num_max_blocks
 
@@ -81,13 +100,14 @@ class CacheHandler(MPClass):
 
                 blocks.append(sampled_frames)
 
-                print(f"xx persisting blocks: {len(blocks)}")
+                logger.debug(f"-- Persisting blocks: {len(blocks)}")
                 self.persist_blocks(blocks)
                 continue
 
+            logger.debug(f"-- Got from prediction queue: {prediction}, {len(sampled_frames)} Frames")
+
             if len(self.block_cache) == num_max_blocks:
                 # Queue is full, store "Cache.num_blocks_to_persist.value" amount in storage.
-
                 if not self.anomaly_id:
                     self.block_cache.pop(0)
                     self.block_cache.append(sampled_frames)
@@ -99,7 +119,7 @@ class CacheHandler(MPClass):
                         blocks.append(self.block_cache.pop(0))
                         self.num_blocks_to_persist -= 1
 
-                    print(f"xx Cache full: persisting blocks: {len(blocks)}")
+                    logger.warning(f"-- Cache full: persisting blocks: {len(blocks)}")
                     self.persist_blocks(blocks)
 
             else:
@@ -109,7 +129,7 @@ class CacheHandler(MPClass):
             if self.num_blocks_to_persist == 0:
                 self.anomaly_id = None
                 self.block_counter = 0
-                print("Anomaly ended.")
+                logger.debug("-- No Anomaly")
 
     def get_process(self) -> Process:
         """Start process."""
