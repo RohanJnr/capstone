@@ -96,3 +96,6 @@ interpolation/FLAVR_4x.pth
 
 # Temp files
 tmp
+
+# Output files
+footage

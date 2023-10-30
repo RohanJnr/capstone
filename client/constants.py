@@ -3,7 +3,7 @@ from multiprocessing import Queue, Value
 
 
 class Settings:
-    time_range = 30  # 120 seconds for before and after anomaly.
+    time_range = 120  # 120 seconds for before and after anomaly.
     frames_per_block = 200
     fps = 30  # Change value at start.
 
