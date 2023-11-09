@@ -8,22 +8,22 @@ from torchvision.io import read_video
 
 from .transforms import ToTensorVideo , Resize
 
-from interpolation import minio_client
+# from interpolation import minio_client
 
 
-def get_anomaly_clips(date, time):
-    """Get anomaly clips for an Anomaly ID from Minio storage."""
-    objects = minio_client.list_objects('test', prefix=f'{date}/{time}/clip_')
+# def get_anomaly_clips(date, time):
+#     """Get anomaly clips for an Anomaly ID from Minio storage."""
+#     objects = minio_client.list_objects('test', prefix=f'{date}/{time}/clip_')
 
-    os.makedirs(f'../tmp/', exist_ok=True)
+#     os.makedirs(f'../tmp/', exist_ok=True)
 
-    obj_count = 0
-    for object in objects:
-        file_path = f'../tmp/{object.object_name}'
-        minio_client.fget_object('test', object.object_name, file_path)
-        obj_count += 1
+#     obj_count = 0
+#     for object in objects:
+#         file_path = f'../tmp/{object.object_name}'
+#         minio_client.fget_object('test', object.object_name, file_path)
+#         obj_count += 1
     
-    print(f"Fetched {obj_count} clips for timestamp {date} {time}")
+#     print(f"Fetched {obj_count} clips for timestamp {date} {time}")
 
 def loadModel(model, checkpoint):
     """Load model from checkpoint."""
@@ -31,9 +31,9 @@ def loadModel(model, checkpoint):
     saved_state_dict = {k.partition("module.")[-1]:v for k,v in saved_state_dict.items()}
     model.load_state_dict(saved_state_dict)
 
-def write_video_cv2(frames , video_name , fps , sizes):
+def write_video_cv2(frames , video_name , fps , sizes, codec):
     """Write video using OpenCV."""
-    out = cv2.VideoWriter(video_name, cv2.CAP_OPENCV_MJPEG, cv2.VideoWriter_fourcc('M','J','P','G'), fps, sizes)
+    out = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*codec), fps, sizes)
 
     for frame in frames:
         out.write(frame)
