@@ -99,3 +99,6 @@ tmp
 
 # Output files
 footage
+footage_old/
+
+bulk_test/

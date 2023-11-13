@@ -41,7 +41,7 @@ class CacheHandler(MPClass):
 
         anomaly_day_folder = self.anomaly_id.strftime(DAY_FOLDER_STRFTIME)
         anomaly_time_folder = self.anomaly_id.strftime(TIME_FOLDER_STRFTIME)
-        codec_names = ["XVID", "MJPG", "MP4V", "avc1", "VP90", "X264"]
+        codec_names = ["MJPG", "MP4V", "avc1", "VP90"]
 
         for codec_name in codec_names:
             logger.info(f"TRYING CODEC: {codec_name}")
@@ -86,7 +86,7 @@ class CacheHandler(MPClass):
         """Handle frame caching after model prediction and frame sampling,"""
         logger.debug(f"Cache handler started: {Settings.blocks_to_persist()}")
         while True:
-            prediction, sampled_frames = Queues.prediction.get()
+            prediction, sampled_frames = Queues.prediction.get(timeout=10)
             num_max_blocks = Settings.blocks_to_persist()
 
             logger.debug(f"Cache size: {len(self.block_cache) + 1}")

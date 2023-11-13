@@ -37,7 +37,7 @@ class AnomalyModel(MPClass):
             frames = []
             resized_frames = []
             for i in range(200):
-                frame = Queues.frame_buffer.get()
+                frame = Queues.frame_buffer.get(timeout=10)
                 frames.append(frame)
                 resized_frames.append(cv2.resize(frame, (128, 128)))
 

@@ -28,5 +28,5 @@ def main(folder_path):
                 print(f"{p.name}, {file.name}, {get_video_bitrate(str(file.absolute()))//1024} KBPS")
 
 # Example usage:
-folder_path = '/home/rohan/dev/capstone/client/anomalies/09 Nov [Thursday], 2023/23:33'
+folder_path = '/home/rohan/dev/capstone/client/anomalies/12 Nov [Sunday], 2023/01:07'
 main(folder_path)
