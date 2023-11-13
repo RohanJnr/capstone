@@ -41,7 +41,7 @@ class CacheHandler(MPClass):
 
         anomaly_day_folder = self.anomaly_id.strftime(DAY_FOLDER_STRFTIME)
         anomaly_time_folder = self.anomaly_id.strftime(TIME_FOLDER_STRFTIME)
-        codec_names = ["MJPG", "MP4V", "avc1", "VP90"]
+        codec_names = ["mjpg", "mp4v", "avc1", "vp09"]
 
         for codec_name in codec_names:
             logger.info(f"TRYING CODEC: {codec_name}")

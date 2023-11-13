@@ -1,16 +1,18 @@
 import subprocess
 from pathlib import Path
-import sys
 import cv2
-from skimage.metrics import structural_similarity as ssim
+from sewar.full_ref import ssim, psnr, msssim
+from psnr_hvsm import psnr_hvs_hvsm_np, bt601ycbcr
 
 
-def calc_ssim(video_1, video_2):
-    print(f"calculating SSIM between {video_1} - {video_2}")
-    video1 = cv2.VideoCapture(video_1)
-    video2 = cv2.VideoCapture(video_2)
-    c = 0
-    s = 0
+
+def calculate_metrics(original_video, interpolated_video):
+    print(f"Calculating metrics for {interpolated_video}")
+    video1 = cv2.VideoCapture(original_video)
+    video2 = cv2.VideoCapture(interpolated_video)
+    frame_count = 0
+    ssim_sum, psnr_sum, ms_ssim_sum = 0, 0, 0
+    psnr_hvs_sum, psnr_hvsm_sum = 0, 0
 
     while True:
         ret1, frame1 = video1.read()
@@ -19,18 +21,38 @@ def calc_ssim(video_1, video_2):
         if not ret1 or not ret2:
             break
 
-        # Convert frames to grayscale (if necessary)
-        # frame1_gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
-        # frame2_gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+        frame_count += 1
 
         # Compute SSIM
-        similarity = ssim(frame1, frame2, channel_axis=2)
-        s += similarity
-        c += 1
+        met, _ = ssim(frame1, frame2)
+        ssim_sum += met
+        
+        # Compute PSNR
+        met = psnr(frame1, frame2)
+        psnr_sum += met
 
-    sim = s/c
+        # Compute MS-SSIM
+        met = msssim(frame1, frame2)
+        ms_ssim_sum += met
 
-    print(f'SSIM between {video_1} - {video_2} = {sim}')
+        # Compute PSNR-HVS
+        frame1, *_ = bt601ycbcr(frame1)
+        frame2, *_ = bt601ycbcr(frame2)
+
+        met, met2 = psnr_hvs_hvsm_np(frame1, frame2)
+        psnr_hvs_sum += met
+        psnr_hvsm_sum += met2
+
+    ssim_avg = ssim_sum / frame_count
+    psnr_avg = psnr_sum / frame_count
+    ms_ssim_avg = ms_ssim_sum / frame_count
+    psnr_hvs_avg = psnr_hvs_sum / frame_count
+
+    print(f'SSIM = {ssim_avg}')
+    print(f'PSNR = {psnr_avg}')
+    print(f'MS-SSIM = {ms_ssim_avg}')
+    print(f'PSNR-HVS = {psnr_hvs_avg}')
+
 
 
 folder = Path("bulk_test")
@@ -46,7 +68,7 @@ order = []
 for file in folder.iterdir():
     if file.is_file():
         order.append(file.absolute())
-        subprocess.run(["python", "-m", "client", file.absolute()], stdout=f, stderr=f)
+        subprocess.run(["conda", "run", "-n", "anomaly","python", "-m", "client", file.absolute()], stdout=f, stderr=f)
 
 
 
@@ -57,7 +79,7 @@ for fi in sorted(date_folder.iterdir()):
 for i, fil in enumerate(sorted(interpolated_folder.iterdir())):
     if fil.is_dir():
         for _file in fil.iterdir():
-            calc_ssim(str(_file.absolute()), str(order[i]))
+            calculate_metrics(str(_file.absolute()), str(order[i]))
 
 
 f.close()
