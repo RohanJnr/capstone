@@ -1,0 +1,2 @@
+video_name,input_size,output_codec,output_size,ssim,psnr,ms_ssim,psnr_hvs,psnr_hvs_m
+Assault036_x264,5421191,Assault036_x264_avc1,205212,0.9302633896764089,28.094154018873663,(0.9355554694598955+0j),24.37974357963327,24.71422678110172

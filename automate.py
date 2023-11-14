@@ -3,7 +3,7 @@ from pathlib import Path
 import cv2
 from sewar.full_ref import ssim, psnr, msssim
 from psnr_hvsm import psnr_hvs_hvsm_np, bt601ycbcr
-
+import pandas as pd
 
 
 def calculate_metrics(original_video, interpolated_video):
@@ -47,39 +47,51 @@ def calculate_metrics(original_video, interpolated_video):
     psnr_avg = psnr_sum / frame_count
     ms_ssim_avg = ms_ssim_sum / frame_count
     psnr_hvs_avg = psnr_hvs_sum / frame_count
+    psnr_hvsm_avg = psnr_hvsm_sum / frame_count
 
     print(f'SSIM = {ssim_avg}')
     print(f'PSNR = {psnr_avg}')
     print(f'MS-SSIM = {ms_ssim_avg}')
     print(f'PSNR-HVS = {psnr_hvs_avg}')
+    print(f'PSNR-HVS-M = {psnr_hvsm_avg}')
+
+    return (ssim_avg, psnr_avg, ms_ssim_avg, psnr_hvs_avg, psnr_hvsm_avg)
 
 
 
-folder = Path("bulk_test")
-date_folder = Path("/home/rohan/dev/capstone/client/anomalies/12 Nov [Sunday], 2023")
-interpolated_folder = Path("/home/rohan/dev/capstone/footage")
+folder = Path("test", "videos")
+date_folder = Path("client/output1/12 Nov [Sunday], 2023")
+interpolated_folder = Path("footage")
 
 
 f = open("logs.txt", "w+")
 
 
-order = []
+# order = []
 
-for file in folder.iterdir():
-    if file.is_file():
-        order.append(file.absolute())
-        subprocess.run(["conda", "run", "-n", "anomaly","python", "-m", "client", file.absolute()], stdout=f, stderr=f)
+# for file in folder.iterdir():
+#     if file.is_file():
+#         order.append(file.absolute())
+#         subprocess.run(["conda", "run", "-n", "anomaly","python", "-m", "client", file.absolute()], stdout=f, stderr=f)
 
 
 
-for fi in sorted(date_folder.iterdir()):
-    subprocess.run(["conda", "run", "-n", "flavr", "python", "-m", "interpolation", "--time", fi.stem], stdout=f, stderr=f)
+# for fi in sorted(date_folder.iterdir()):
+#     subprocess.run(["conda", "run", "-n", "flavr", "python", "-m", "interpolation", "--time", fi.stem], stdout=f, stderr=f)
 
+column_names = ["video_name", "input_size", "output_codec", "output_size", "ssim", "psnr", "ms_ssim", "psnr_hvs", "psnr_hvs_m"]
+df = pd.DataFrame(columns=column_names)
 
 for i, fil in enumerate(sorted(interpolated_folder.iterdir())):
     if fil.is_dir():
-        for _file in fil.iterdir():
-            calculate_metrics(str(_file.absolute()), str(order[i]))
+        input_video = folder/f"{fil.name}.mp4"
+        input_size = input_video.stat().st_size
 
+        for _file in fil.iterdir():
+            metrics = calculate_metrics(str(_file.absolute()), str(input_video.absolute()))
+            row_dict = {"video_name": fil.stem, "input_size": input_size, "output_codec": _file.stem, "output_size": _file.stat().st_size, "ssim": metrics[0], "psnr": metrics[1], "ms_ssim": metrics[2], "psnr_hvs": metrics[3], "psnr_hvs_m": metrics[4]}
+            df = pd.concat([df, pd.DataFrame([row_dict])], ignore_index=True)
+
+df.to_csv("metrics.csv", header=True, index=False)
 
 f.close()

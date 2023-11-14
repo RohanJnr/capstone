@@ -101,4 +101,8 @@ tmp
 footage
 footage_old/
 
+# Bulk test videos
 bulk_test/
+
+# Output clips folder
+client/output1

@@ -11,25 +11,26 @@ from .utils import *
 
 parser = argparse.ArgumentParser(description='Interpolate frames')
 
-parser.add_argument("--date" , type=str , help="Date of the crime", default="12 Nov [Sunday], 2023")
-parser.add_argument("--time" , type=str , required=True , help="Time of the crime")
+# parser.add_argument("--date" , type=str , help="Date of the crime", default="12 Nov [Sunday], 2023")
+# parser.add_argument("--time" , type=str , required=True , help="Time of the crime")
+parser.add_argument("--name" , type=str , required=True , help="Name of the video")
 parser.add_argument("--output_fps" , type=int , help="Target FPS" , default=30)
 
 args = parser.parse_args()
 
-if os.path.exists(f"client/anomalies/{args.date}/{args.time}"):
+if os.path.exists(f"client/output1/{args.name}"):
     print("Clips already exist, skipping download.")
 # else:
 #     get_anomaly_clips(args.date, args.time) # Download clips from Minio
 
 codec_names = ["mjpg", "mp4v", "avc1", "vp09"]
-# codec_names = ["XVID"]
+# codec_names = ["avc1"]
 for codec in codec_names:
 
-    p = Path(f"footage/{args.time}/{codec}_{args.date}_{args.time}.mp4")
-    p.parent.mkdir(parents=True, exist_ok=True)
+    p = Path(f"footage/{args.name}")
+    p.mkdir(parents=True, exist_ok=True)
 
-    output_video = os.path.abspath(f"footage/{args.time}/{codec}_{args.date}_{args.time}.mp4")
+    output_video = os.path.abspath(f"footage/{args.name}/{codec}.mp4")
     # Model parameters
     model_name = "unet_18"
     nbr_frame = 4
@@ -43,7 +44,7 @@ for codec in codec_names:
     loadModel(model , checkpoint)
     model = model.cuda()
 
-    videoTensor, tensor_size = videos_to_tensor(f"client/anomalies/{args.date}/{args.time}/{codec}")
+    videoTensor, tensor_size = videos_to_tensor(f"client/output1/{args.name}/{codec}")
 
     idxs = torch.Tensor(range(len(videoTensor))).type(torch.long).view(1,-1).unfold(1,size=nbr_frame,step=1).squeeze(0)
     videoTensor = video_transform(videoTensor, (tensor_size[1], tensor_size[0]))

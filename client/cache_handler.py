@@ -18,7 +18,7 @@ client = Minio('127.0.0.1:9000',
     http_client=urllib3.ProxyManager('http://127.0.0.1:9000')
 )
 
-ANOMALIES_FOLDER = Path("client", "anomalies")
+ANOMALIES_FOLDER = Path("client", "output1")
 DAY_FOLDER_STRFTIME = "%d %b [%A], %Y"
 TIME_FOLDER_STRFTIME = "%H:%M"
 
@@ -26,8 +26,9 @@ TIME_FOLDER_STRFTIME = "%H:%M"
 class CacheHandler(MPClass):
     """Class representation for anomaly detection model."""
 
-    def __init__(self) -> None:
+    def __init__(self, video_name) -> None:
         """init class."""
+        self.video_name = video_name
         self.anomaly_id: datetime | None = None
         self.num_blocks_to_persist = 0
 
@@ -39,14 +40,12 @@ class CacheHandler(MPClass):
         clip_name = f'clip_{self.block_counter}.mp4'
         self.block_counter += 1
 
-        anomaly_day_folder = self.anomaly_id.strftime(DAY_FOLDER_STRFTIME)
-        anomaly_time_folder = self.anomaly_id.strftime(TIME_FOLDER_STRFTIME)
         codec_names = ["mjpg", "mp4v", "avc1", "vp09"]
 
         for codec_name in codec_names:
             logger.info(f"TRYING CODEC: {codec_name}")
             try:
-                output_file = Path(ANOMALIES_FOLDER, anomaly_day_folder, anomaly_time_folder, codec_name, clip_name)
+                output_file = Path(ANOMALIES_FOLDER, self.video_name, codec_name, clip_name)
                 output_file.parent.mkdir(parents=True, exist_ok=True)
 
                 codec = cv2.VideoWriter_fourcc(*codec_name)  # You can use other codecs like 'XVID' or 'MJPG'
@@ -95,11 +94,8 @@ class CacheHandler(MPClass):
                 logger.warning(f"Got from prediction queue: {prediction}, {len(sampled_frames)} Frames")
                 if self.anomaly_id is None:
                     self.anomaly_id = datetime.now()
-                    anomaly_day_folder = self.anomaly_id.strftime(DAY_FOLDER_STRFTIME)
-                    anomaly_time_folder = self.anomaly_id.strftime(TIME_FOLDER_STRFTIME)
 
-                    anomaly_folder = ANOMALIES_FOLDER / anomaly_day_folder / anomaly_time_folder
-                    anomaly_folder.mkdir(parents=True, exist_ok=True)
+
 
                 self.num_blocks_to_persist = num_max_blocks
 

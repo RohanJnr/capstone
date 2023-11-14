@@ -32,7 +32,7 @@ def main():
 
         logger.debug(f"Started Model Process with PID: {mod_process.pid}")
 
-        ch = cache_handler.CacheHandler()
+        ch = cache_handler.CacheHandler(VIDEO_PATH.stem)
         ch_process = ch.get_process()
         ch_process.start()
 
