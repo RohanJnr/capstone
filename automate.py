@@ -60,7 +60,7 @@ def calculate_metrics(original_video, interpolated_video):
 
 
 folder = Path("test", "videos")
-date_folder = Path("client/output1/12 Nov [Sunday], 2023")
+date_folder = Path("client/output1")
 interpolated_folder = Path("footage")
 
 
@@ -72,15 +72,15 @@ f = open("logs.txt", "w+")
 # for file in folder.iterdir():
 #     if file.is_file():
 #         order.append(file.absolute())
-#         subprocess.run(["conda", "run", "-n", "anomaly","python", "-m", "client", file.absolute()], stdout=f, stderr=f)
+#         subprocess.run(["conda", "run", "-n", "anomaly","python", "-m", "client", file.absolute()], stdout=f, stderr=f, capture_output=True, text=True)
 
 
 
-# for fi in sorted(date_folder.iterdir()):
-#     subprocess.run(["conda", "run", "-n", "flavr", "python", "-m", "interpolation", "--time", fi.stem], stdout=f, stderr=f)
+for fi in sorted(date_folder.iterdir()):
+    subprocess.run(["conda", "run", "-n", "flavr", "python", "-m", "interpolation", "--name", fi.stem], stdout=f, stderr=f)
 
 column_names = ["video_name", "input_size", "output_codec", "output_size", "ssim", "psnr", "ms_ssim", "psnr_hvs", "psnr_hvs_m"]
-df = pd.DataFrame(columns=column_names)
+df = pd.read_csv("metrics.csv", header=0)
 
 for i, fil in enumerate(sorted(interpolated_folder.iterdir())):
     if fil.is_dir():

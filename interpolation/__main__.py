@@ -23,8 +23,8 @@ if os.path.exists(f"client/output1/{args.name}"):
 # else:
 #     get_anomaly_clips(args.date, args.time) # Download clips from Minio
 
-codec_names = ["mjpg", "mp4v", "avc1", "vp09"]
-# codec_names = ["avc1"]
+# codec_names = ["mjpg", "mp4v", "avc1", "vp09"]
+codec_names = ["avc1"]
 for codec in codec_names:
 
     p = Path(f"footage/{args.name}")
