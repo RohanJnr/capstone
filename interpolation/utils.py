@@ -15,11 +15,11 @@ def get_anomaly_clips(date, time):
     """Get anomaly clips for an Anomaly ID from Minio storage."""
     objects = minio_client.list_objects('test', prefix=f'{date}/{time}/clip_')
 
-    os.makedirs(f'../tmp/', exist_ok=True)
+    os.makedirs(f'tmp/', exist_ok=True)
 
     obj_count = 0
     for object in objects:
-        file_path = f'../tmp/{object.object_name}'
+        file_path = f'tmp/{object.object_name}'
         minio_client.fget_object('test', object.object_name, file_path)
         obj_count += 1
     

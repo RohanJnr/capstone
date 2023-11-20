@@ -16,12 +16,12 @@ parser.add_argument("--output_fps" , type=int , help="Target FPS" , default=30)
 
 args = parser.parse_args()
 
-if os.path.exists(f"../tmp/{args.date}/{args.time}"):
+if os.path.exists(f"tmp/{args.date}/{args.time}"):
     print("Clips already exist, skipping download.")
 else:
     get_anomaly_clips(args.date, args.time) # Download clips from Minio
 
-output_video = os.path.abspath(f"../footage/{args.date} {args.time}.avi")
+output_video = os.path.abspath(f"footage/{args.date} {args.time}.avi")
 
 # Model parameters
 model_name = "unet_18"
@@ -36,7 +36,7 @@ model = UNet_3D_3D(model_name.lower() , n_inputs=4, n_outputs=n_outputs,  joinTy
 loadModel(model , checkpoint)
 model = model.cuda()
 
-videoTensor, tensor_size = videos_to_tensor(f"../tmp/{args.date}/{args.time}")
+videoTensor, tensor_size = videos_to_tensor(f"tmp/{args.date}/{args.time}")
 
 idxs = torch.Tensor(range(len(videoTensor))).type(torch.long).view(1,-1).unfold(1,size=nbr_frame,step=1).squeeze(0)
 videoTensor = video_transform(videoTensor, (tensor_size[1], tensor_size[0]))

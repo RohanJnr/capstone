@@ -8,7 +8,7 @@ from client import capture, cache_handler, model
 
 logger.remove()
 logger.add(sys.stdout, colorize=True, format="<green>{time}</green> | <magenta>{level}</magenta> | <magenta>{process}.{module}.{function}</magenta> | <level>{message}</level>")
-VIDEO_PATH = Path("./test/videos/Assault009_x264.mp4")
+VIDEO_PATH = Path("./test/videos/Assault036_x264.mp4")
 
 
 def main():
