@@ -106,3 +106,5 @@ bulk_test/
 
 # Output clips folder
 client/output1
+
+.vscode/
